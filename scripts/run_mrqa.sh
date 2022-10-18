@@ -17,7 +17,7 @@
 REPO=$PWD
 MODEL=${1:-xlm-roberta-base}
 TGT=${2:-mrqa}
-GPU=${3:-3}
+GPU=${3:-0}
 MODEL_PATH=${4}
 SEED=${5:-1}
 METHOD=${6:-OIL}
