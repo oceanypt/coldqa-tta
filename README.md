@@ -1,6 +1,6 @@
 ## Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts
 
-This repository contains information about COLDQA benchmark, and implementations of some TTA method, including our proposed OIL method. More details can be seen in our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]().
+This repository contains information about COLDQA benchmark, and implementations of some TTA methods, including our proposed OIL method. More details can be seen in our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]().
 
 
 ## Quick Links
