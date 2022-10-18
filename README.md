@@ -27,6 +27,7 @@ Specifically,
 * We first introduce a new benchmark named COLDQA for robust QA, which unifies the evaluation on cross-lingual transfer, domain adaptation and corruption robustness,
 * based on which, we present OIL for real-time TTA, a novel TTA method that is inspired by imitation learning and further enhanced by casual inference. 
 
+![](figure/TTA.png)
 
 ## COLDQA Benchmark
 
