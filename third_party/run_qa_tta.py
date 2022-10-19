@@ -24,7 +24,6 @@ import os
 import random
 import timeit
 
-import re
 
 from torch.nn import CrossEntropyLoss
 import torch.nn.functional as F
@@ -430,8 +429,7 @@ def evaluate(args, model, tokenizer, prefix="", language='en', lang2id=None):
       args.verbose_logging,
       args.version_2_with_negative,
       args.null_score_diff_threshold,
-      tokenizer,
-      map_to_origin=not (args.model_type == "xlm-roberta" and (language == 'zh' or language == "ko"))
+      tokenizer
     )
 
   # Compute the F1 and exact scores.
@@ -472,13 +470,6 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   eval_sampler = RandomSampler(dataset)
   train_dataloader = DataLoader(dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
-  if args.max_steps > 0:
-    t_total = args.max_steps
-    args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
-  else:
-    t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
-
-
 
   # Prepare optimizer and schedule (linear warmup and decay)
   no_decay = ['bias', 'LayerNorm.weight']
@@ -509,8 +500,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   start_time = timeit.default_timer()
 
 
-  taecher_model = copy.deepcopy(model)
-  taecher_model.eval()
+  teacher_model = copy.deepcopy(model)
+  teacher_model.eval()
 
   global_step = 0
 
@@ -525,7 +516,6 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   for step, train_batch in enumerate(train_batchs):
     ### do Test
     model.eval()
-
     train_batch = tuple(t.to(args.device) for t in train_batch)
 
     with torch.no_grad():
@@ -545,11 +535,10 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
       outputs = model(**train_inputs)
    
 
-    
       #debias
       if args.debias and args.alpha != 1:
         with torch.no_grad():
-          source_outputs = taecher_model(**train_inputs)
+          source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0]
           pseudo_end_logits = source_outputs[1]
           beta = args.alpha
@@ -610,33 +599,25 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
 
       if args.m != 0:
         with torch.no_grad():
-          source_outputs = taecher_model(**train_inputs)
+          source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0].detach()
           pseudo_end_logits = source_outputs[1].detach()
           pseudo_start_positions = torch.argmax(pseudo_start_logits, dim = 1)
           pseudo_end_positions = torch.argmax(pseudo_end_logits, dim = 1)
-
-       
-        
         adapted_outputs = model(**train_inputs)
         start_logits = adapted_outputs[0]
         end_logits = adapted_outputs[1]
 
-
-        # original
         if not args.debias:
             _, loss_hard_start, loss_hard_end = qa_loss(start_logits, end_logits, copy.deepcopy(pseudo_start_positions), copy.deepcopy(pseudo_end_positions), return_start_end=True) # (batch,)
             echo = args.topk
             loss = (torch.sum((loss_hard_start < echo) * loss_hard_start) / (torch.sum((loss_hard_start < echo)) + 1e-10) +\
               torch.sum((loss_hard_end < echo) * loss_hard_end) / (torch.sum((loss_hard_end < echo)) + 1e-10)) / 2.
 
-
-
         elif args.debias:
             _, loss_hard_start, loss_hard_end = qa_loss(start_logits, end_logits, copy.deepcopy(pseudo_start_positions), copy.deepcopy(pseudo_end_positions), return_start_end=True) # (batch,)
             start_logits_2 = (start_logits + start_logits - pseudo_start_logits)
             end_logits_2 = (end_logits + end_logits - pseudo_end_logits)
-
             _, loss_clean_start, loss_clean_end = qa_loss(start_logits_2, end_logits_2, copy.deepcopy(pseudo_start_positions), copy.deepcopy(pseudo_end_positions), return_start_end=True)
             echo = args.topk
             loss = (torch.sum((loss_hard_start < echo) * loss_clean_start) / (torch.sum((loss_hard_start < echo)) + 1e-10) +\
@@ -648,7 +629,7 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
       elif args.m == 0 and args.topk > 0:
         #PL
         with torch.no_grad():
-          source_outputs = taecher_model(**train_inputs)
+          source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0].detach()
           pseudo_end_logits = source_outputs[1].detach()
           pseudo_start_positions = torch.argmax(pseudo_start_logits, dim = 1)
@@ -657,7 +638,6 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
         adapted_outputs = model(**train_inputs)
         start_logits = adapted_outputs[0]
         end_logits = adapted_outputs[1]
-
         loss_hard = qa_loss(start_logits, end_logits, pseudo_start_positions, pseudo_end_positions) # (batch,)        
         echo = args.topk
         loss = torch.sum((loss_hard < echo) * loss_hard) / (torch.sum((loss_hard < echo)) + 1e-10)
@@ -666,19 +646,15 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
       elif args.m == 0 and args.topk == -1: 
         #Tent
         with torch.no_grad():
-          source_outputs = taecher_model(**train_inputs)
+          source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0].detach()
           pseudo_end_logits = source_outputs[1].detach()
-
-
         adapted_outputs = model(**train_inputs)
         start_logits = adapted_outputs[0]
         end_logits = adapted_outputs[1]
 
         start_loss = -(F.softmax(pseudo_start_logits, dim = 1) * F.log_softmax(start_logits, dim = 1)).sum(1).mean(0)        
         end_loss = -(F.softmax(pseudo_end_logits, dim = 1) * F.log_softmax(end_logits, dim = 1)).sum(1).mean(0)
-        
-
         loss = (start_loss + end_loss) / 2
 
 
@@ -693,7 +669,7 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
 
 
       ## update the source model
-      for param1, param2 in zip(taecher_model.parameters(), model.parameters()):
+      for param1, param2 in zip(teacher_model.parameters(), model.parameters()):
         param1.data = args.m * param1.data + (1 - args.m) * param2.data
 
 
@@ -751,6 +727,7 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
       map_to_origin=not (args.model_type == "xlm-roberta" and (language == 'zh' or language == "ko")), ##888
     )
 
+
   # Compute the F1 and exact scores.
   print('\n\n\n')
   print('\t\t Results on %s' %(language))
@@ -760,7 +737,9 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   logger.info("Results: {}".format(result))
   print('\n\n\n')
 
+
   return results
+
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False,
@@ -1248,11 +1227,19 @@ def main():
       # Evaluate
       if args.do_OIL:
         result = OIL(args, model, tokenizer, prefix=global_step, language=args.eval_lang, lang2id=lang2id)
+
+      
     
       result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
       results.update(result)
 
       all_res.append(result)
+
+  
+  
+
+  
+
 
   return results
 
