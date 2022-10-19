@@ -1,7 +1,7 @@
 ## Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts
 
-This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts](), which includes our proposed ColdQA benchmark and the implementation of the methods for test-time adapttion (PL, Tent and OIL). 
-%This repository contains information about COLDQA benchmark, and implementations of some TTA methods, including our proposed OIL method. More details can %be seen in our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]().
+This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]() at Findings of EMNLP2022, which includes our proposed ColdQA benchmark and the implementation of the methods for test-time adapttion (PL, Tent and OIL). 
+
 
 
 ## Quick Links
@@ -75,37 +75,38 @@ You should run the following script to install the dependencies first.
 pip install --user .
 pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 ```
+(To be notated, the results in our paper were obtained by training on the GPU of NVIDIA A100.)
 
 ### Download the data
 
 To this end, follow these steps:
 
 1. create a `download` folder with `mkdir -p download` in the root of this project,
-2. download the datasets from [here](https://huggingface.co/datasets/oceanpty/ColdQA), unzip them, and put the unzipped files under `download` folder.
+2. download the datasets from [here](https://huggingface.co/datasets/oceanpty/ColdQA), unzip them, and put the unzipped files under the `download` folder.
 
 
-### Obtain Base Model
+### Obtain the Base Model
 
-To evaluate the model generalization on COLDQA, we firstly need to train a source model with the source training data. 
+To evaluate the model generalization on ColdQA, we firstly need to train a source model with the source training data. 
 
 In the paper, we adapt the xlm-roberta-base/large, xlm-roberta-base/large with xTune as our base model.
 You can train the former two from [here](https://github.com/google-research/xtreme) and the latter two from [here](https://github.com/bozheng-hit/xTune).
 
-For better reproduction, we directly provide the model trained on source dataset for download:
+For better reproduction, we directly provide the model trained on the source dataset for download:
 * [xlm-roberta-base](https://huggingface.co/oceanpty/xlmr-base-squad),
 * [xlm-roberta-large](https://huggingface.co/oceanpty/xlmr-large-squad),
 * [xlm-roberta-base (xTune)](https://huggingface.co/dyyyyyyyy/xTune_squad_XLM-RoBERTa-base),
 * [xlm-roberta-large (xTune)](https://huggingface.co/dyyyyyyyy/xTune_squad_XLM-RoBERTa-large).
 
 
-### Run TTA Method
+### Run TTA Methods
 
 You may run by the following command:
 
 ```bash
 bash scripts/run_[TASK].sh [MODEL] [DATA] [GPU] [MODEL_PATH] [SEED] [METHOD]
 ```
-The predictions is output to the `MODEL_PATH` directory.
+The predictions will be saved to the `MODEL_PATH` directory.
 
 Arguments for the evaluation script are as follows: 
 
@@ -120,7 +121,7 @@ Arguments for the evaluation script are as follows:
 Detailed hyper-parameters can be seen in the corresponding scripts.
 
 
-## Main Results
+## Main Results on ColdQA
 
 For xlmr-base: 
 
@@ -139,7 +140,7 @@ For xlmr-large:
 | Method     | EM (Avg) | F1 (Avg) |
 | :--------- | :------: | :------: |
 | Xlmr-large |  58.58   |  73.82   |
-| Tent       |  54.78   |  70.58   |
+| Tent       |  54.56   |  70.34   |
 | PL         |  61.80   |  76.05   |
 | OIL        |  62.04   |  76.19   |
 | xTune+PL   |  63.73   |  77.01   |
