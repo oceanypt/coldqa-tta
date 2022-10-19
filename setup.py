@@ -86,8 +86,8 @@ setup(
     keywords="NLP deep learning transformer pytorch tensorflow BERT GPT GPT-2 google openai CMU",
     license="Apache",
     url="https://github.com/huggingface/transformers",
-    package_dir={"": "src"},
-    packages=find_packages("src"),
+    package_dir={"": "third_party"},
+    packages=find_packages("third_party"),
     install_requires=[
         "numpy",
         "tokenizers == 0.5.2",
@@ -111,8 +111,6 @@ setup(
         "tensorboardX",
         # for ner
         "seqeval == 0.0.12",
-        # for torch
-        "torch",
         # for preprocessing
         "networkx == 1.11",
     ],
