@@ -1,12 +1,12 @@
 ## Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts
 
-This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]() at Findings of EMNLP2022, which includes our proposed ColdQA benchmark and the implementation of the methods for test-time adapttion (PL, Tent and OIL). 
+This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]() at Findings of EMNLP2022, which includes our proposed COLDQA benchmark and the implementation of the methods for test-time adapttion (PL, Tent and OIL). 
 
 
 
 ## Quick Links
   - [Overview](#overview)
-  - [ColdQA Benchmark](#coldqa-benchmark)
+  - [COLDQA Benchmark](#coldqa-benchmark)
     - [Source Distribution](#source-distribution)
     - [Target Distribution](#target-distribution)
   - [TTA Method: Quick Start](#tta-method-quick-start)
@@ -87,7 +87,7 @@ To this end, follow these steps:
 
 ### Obtain the Base Model
 
-To evaluate the model generalization on ColdQA, we firstly need to train a source model with the source training data. 
+To evaluate the model generalization on COLDQA, we firstly need to train a source model with the source training data. 
 
 In the paper, we adapt the xlm-roberta-base/large, xlm-roberta-base/large with xTune as our base model.
 You can train the former two from [here](https://github.com/google-research/xtreme) and the latter two from [here](https://github.com/bozheng-hit/xTune).
@@ -121,7 +121,7 @@ Arguments for the evaluation script are as follows:
 Detailed hyper-parameters can be seen in the corresponding scripts.
 
 
-## Main Results on ColdQA
+## Main Results on COLDQA
 
 For xlmr-base: 
 
