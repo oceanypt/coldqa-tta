@@ -1,6 +1,6 @@
 ## Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts
 
-This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]() at Findings of EMNLP2022, which includes our proposed COLDQA benchmark and the implementation of the methods for test-time adapttion (PL, Tent and OIL). 
+This repository is the code for our paper [Real-time Test-time Adaptation for Robust Question Answering under Distribution Shifts]() at Findings of EMNLP2022, which includes our proposed COLDQA benchmark and the implementation of the methods for test-time adaptation (PL, Tent and OIL). 
 
 
 
