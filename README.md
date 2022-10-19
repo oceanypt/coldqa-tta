@@ -72,6 +72,7 @@ You should run the following script to install the dependencies first.
 
 ```bash
 pip install --user .
+pip install torch==1.7.1+cu110 torchvision==0.8.2+cu110 torchaudio===0.7.2 -f https://download.pytorch.org/whl/torch_stable.html
 ```
 
 ### Download the data
@@ -89,16 +90,12 @@ To evaluate the model generalization on COLDQA, we firstly need to train a sourc
 In the paper, we adapt the xlm-roberta-base/large, xlm-roberta-base/large with xTune as our base model.
 You can train the former two from [here](https://github.com/google-research/xtreme) and the latter two from [here](https://github.com/bozheng-hit/xTune).
 
-For better reproduction, wedirectly provide the model trained on source dataset for download:
+For better reproduction, we directly provide the model trained on source dataset for download:
 * [xlm-roberta-base](https://huggingface.co/oceanpty/xlmr-base-squad),
 * [xlm-roberta-large](https://huggingface.co/oceanpty/xlmr-large-squad),
 * [xlm-roberta-base (xTune)](https://huggingface.co/dyyyyyyyy/xTune_squad_XLM-RoBERTa-base),
 * [xlm-roberta-large (xTune)](https://huggingface.co/dyyyyyyyy/xTune_squad_XLM-RoBERTa-large).
 
-Then you should:
-1. create `outputs` folder with `mkdir -p outputs` in the root of this project,
-2. obtain the four models by downloading or retraining,
-3. put the models under `outputs` folder.
 
 ### Run TTA Method
 
@@ -107,14 +104,15 @@ You may run by the following command:
 ```bash
 bash scripts/run_[TASK].sh [MODEL] [DATA] [GPU] [MODEL_PATH] [SEED] [METHOD]
 ```
+The predictions is output to the `MODEL_PATH` directory.
 
 Arguments for the evaluation script are as follows: 
 
 * `TASK`: Distribution shift type. Choose in `noiseqa`, `xquad`, `mlqa` or `mrqa`,
 * `MODEL`: Base model type. Choose in `xlm-roberta-base` or `xlm-roberta-large`,
-* `DATA`: Data type. Choose in `noiseqa-syn`, `noiseqa-na`, `xquad`, `mlqa` or `mrqa` (should match the corresponding `TASK`),
+* `DATA`: Data type. Choose in `noiseQA-syn`, `noiseQA-na`, `xquad`, `mlqa` or `mrqa` (should match the corresponding `TASK`),
 * `GPU`: GPU ID,
-* `MODEL_PATH`: The path of a trained checkpoint,
+* `MODEL_PATH`: The path of a trained base model checkpoint directory,
 * `SEED`: Random seed,
 * `METHOD`: TTA method. Choose in `Tent`, `PL` or `OIL`.
 
@@ -145,6 +143,3 @@ For xlmr-large:
 | OIL        |  62.04   |  76.19   |
 | xTune+PL   |  63.73   |  77.01   |
 | xTune+OIL  |  64.57   |  77.93   |
-
-
-
