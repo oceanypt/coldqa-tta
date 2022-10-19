@@ -6,7 +6,7 @@ This repository is the code for our paper [Real-time Test-time Adaptation for Ro
 
 ## Quick Links
   - [Overview](#overview)
-  - [COLDQA Benchmark](#coldqa-benchmark)
+  - [ColdQA Benchmark](#coldqa-benchmark)
     - [Source Distribution](#source-distribution)
     - [Target Distribution](#target-distribution)
   - [TTA Method: Quick Start](#tta-method-quick-start)
