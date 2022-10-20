@@ -2,3 +2,4 @@ models/
 outputs/
 download/
 __pycache__/
+cache*
