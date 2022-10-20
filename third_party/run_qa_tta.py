@@ -429,7 +429,8 @@ def evaluate(args, model, tokenizer, prefix="", language='en', lang2id=None):
       args.verbose_logging,
       args.version_2_with_negative,
       args.null_score_diff_threshold,
-      tokenizer
+      tokenizer,
+      map_to_origin=not (args.model_type == "xlm-roberta" and (language == 'zh' or language == "ko")),
     )
 
   # Compute the F1 and exact scores.
@@ -455,8 +456,6 @@ def qa_loss(start_logits, end_logits, start_positions, end_positions, return_sta
     return total_loss, start_loss, end_loss
 
 
-
-
 def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   dataset, examples, features = load_and_cache_examples(args, tokenizer, evaluate=True, output_examples=True,
                               language=language, lang2id=lang2id)
@@ -478,14 +477,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
              'weight_decay': args.weight_decay},
             {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
         ]
-
-
   optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
   scheduler = get_constant_schedule_with_warmup(optimizer, num_warmup_steps=0)
-
-
-
-
 
   # multi-gpu evaluate
   if args.n_gpu > 1 and not isinstance(model, torch.nn.DataParallel):
@@ -499,22 +492,18 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   all_results = []
   start_time = timeit.default_timer()
 
-
   teacher_model = copy.deepcopy(model)
   teacher_model.eval()
 
   global_step = 0
 
-
   memory_size = args.memory_size
   epoch_iterator = tqdm(train_dataloader, desc="Iteration")
   train_batchs = [d for d in epoch_iterator]
 
- 
-
 
   for step, train_batch in enumerate(train_batchs):
-    ### do Test
+    ## do Test
     model.eval()
     train_batch = tuple(t.to(args.device) for t in train_batch)
 
@@ -533,9 +522,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
         train_inputs["langs"] = train_batch[6]
 
       outputs = model(**train_inputs)
-   
 
-      #debias
+      # debias
       if args.debias and args.alpha != 1:
         with torch.no_grad():
           source_outputs = teacher_model(**train_inputs)
@@ -545,8 +533,6 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
           start_logits = 2 * outputs[0] - pseudo_start_logits - beta * (outputs[0] - pseudo_start_logits)
           end_logits = 2 * outputs[1] - pseudo_end_logits - beta * (outputs[1] - pseudo_end_logits)
           outputs = (start_logits, end_logits)
-
-
 
     for i, example_index in enumerate(example_indices):
       eval_feature = features[example_index.item()]
@@ -571,11 +557,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
           end_top_index=end_top_index,
           cls_logits=cls_logits,
         )
-
       else:
         start_logits, end_logits = output
-
-
         result = SquadResult(unique_id, start_logits, end_logits)
 
       all_results.append(result)
@@ -586,7 +569,7 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
     else:
       pool_size = memory_size
     for train_batch in train_batchs[step + 1 - pool_size : step + 1]:
-      #model.roberta.encoder.layer_to_detach = -1
+      # model.roberta.encoder.layer_to_detach = -1
       
       model.train()
       train_batch = tuple(t.to(args.device) for t in train_batch)
@@ -623,11 +606,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
             loss = (torch.sum((loss_hard_start < echo) * loss_clean_start) / (torch.sum((loss_hard_start < echo)) + 1e-10) +\
               torch.sum((loss_hard_end < echo) * loss_clean_end) / (torch.sum((loss_hard_end < echo)) + 1e-10)) / 2.
 
-                        
-
-
       elif args.m == 0 and args.topk > 0:
-        #PL
+        # PL
         with torch.no_grad():
           source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0].detach()
@@ -641,10 +621,9 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
         loss_hard = qa_loss(start_logits, end_logits, pseudo_start_positions, pseudo_end_positions) # (batch,)        
         echo = args.topk
         loss = torch.sum((loss_hard < echo) * loss_hard) / (torch.sum((loss_hard < echo)) + 1e-10)
-
       
       elif args.m == 0 and args.topk == -1: 
-        #Tent
+        # Tent
         with torch.no_grad():
           source_outputs = teacher_model(**train_inputs)
           pseudo_start_logits = source_outputs[0].detach()
@@ -657,25 +636,16 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
         end_loss = -(F.softmax(pseudo_end_logits, dim = 1) * F.log_softmax(end_logits, dim = 1)).sum(1).mean(0)
         loss = (start_loss + end_loss) / 2
 
-
-
-
       loss.backward()
       optimizer.step()
       scheduler.step()  # Update learning rate schedule
       model.zero_grad()
 
-
-
-
       ## update the source model
       for param1, param2 in zip(teacher_model.parameters(), model.parameters()):
         param1.data = args.m * param1.data + (1 - args.m) * param2.data
 
-
     global_step += 1
-
-
 
   evalTime = timeit.default_timer() - start_time
   logger.info("  Evaluation done in total %f secs (%f sec per example)", evalTime, evalTime / len(dataset))
@@ -724,9 +694,8 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
       args.version_2_with_negative,
       args.null_score_diff_threshold,
       tokenizer,
-      map_to_origin=not (args.model_type == "xlm-roberta" and (language == 'zh' or language == "ko")), ##888
+      map_to_origin=not (args.model_type == "xlm-roberta" and (language == 'zh' or language == "ko")),
     )
-
 
   # Compute the F1 and exact scores.
   print('\n\n\n')
@@ -737,9 +706,7 @@ def OIL(args, model, tokenizer, prefix="", language='en', lang2id=None):
   logger.info("Results: {}".format(result))
   print('\n\n\n')
 
-
   return results
-
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False, output_examples=False,
@@ -1228,18 +1195,10 @@ def main():
       if args.do_OIL:
         result = OIL(args, model, tokenizer, prefix=global_step, language=args.eval_lang, lang2id=lang2id)
 
-      
-    
       result = dict((k + ("_{}".format(global_step) if global_step else ""), v) for k, v in result.items())
       results.update(result)
 
       all_res.append(result)
-
-  
-  
-
-  
-
 
   return results
 
